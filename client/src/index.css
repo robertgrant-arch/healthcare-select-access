@@ -1,3 +1,10 @@
+/* 
+ * Healthcare Select Access — Global Styles
+ * Design: Secure Clarity (USWDS + Premium SaaS)
+ * Typography: Sora (headings) + IBM Plex Sans (body) + IBM Plex Mono (data)
+ * Palette: Federal Blue (#1B3A6B) + Medical Teal (#0E7490) + Light Sky (#E0F2FE)
+ */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -40,77 +47,63 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* Healthcare custom tokens */
+  --color-hsa-blue: var(--hsa-blue);
+  --color-hsa-teal: var(--hsa-teal);
+  --color-hsa-sky: var(--hsa-sky);
+  --color-hsa-navy: var(--hsa-navy);
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
+  /* Healthcare Select Access brand colors */
+  --hsa-blue: #1B3A6B;
+  --hsa-teal: #0E7490;
+  --hsa-sky: #E0F2FE;
+  --hsa-navy: #0F2D5C;
+  --hsa-teal-light: #CFFAFE;
+  --hsa-teal-mid: #0891B2;
+
+  /* Primary = Federal Blue */
+  --primary: oklch(0.31 0.12 256);
+  --primary-foreground: oklch(0.98 0.005 240);
+
+  /* Secondary = Light sky blue */
+  --secondary: oklch(0.95 0.025 230);
+  --secondary-foreground: oklch(0.31 0.12 256);
+
+  /* Accent = Medical Teal */
+  --accent: oklch(0.52 0.12 210);
+  --accent-foreground: oklch(0.98 0.005 210);
+
+  --radius: 0.5rem;
+  --background: oklch(0.975 0.003 240);
+  --foreground: oklch(0.18 0.02 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
+  --card-foreground: oklch(0.18 0.02 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
+  --popover-foreground: oklch(0.18 0.02 240);
+  --muted: oklch(0.94 0.008 230);
+  --muted-foreground: oklch(0.52 0.02 230);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
-}
+  --border: oklch(0.88 0.01 230);
+  --input: oklch(0.88 0.01 230);
+  --ring: oklch(0.52 0.12 210);
 
-.dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.85 0.005 65);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.85 0.005 65);
-  --secondary: oklch(0.24 0.006 286.033);
-  --secondary-foreground: oklch(0.7 0.005 65);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.488 0.243 264.376);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.85 0.005 65);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.488 0.243 264.376);
+  --chart-1: oklch(0.52 0.12 210);
+  --chart-2: oklch(0.42 0.14 240);
+  --chart-3: oklch(0.62 0.10 190);
+  --chart-4: oklch(0.35 0.10 260);
+  --chart-5: oklch(0.70 0.08 200);
+
+  --sidebar: oklch(0.22 0.08 250);
+  --sidebar-foreground: oklch(0.92 0.01 230);
+  --sidebar-primary: oklch(0.52 0.12 210);
+  --sidebar-primary-foreground: oklch(0.98 0.005 210);
+  --sidebar-accent: oklch(0.30 0.08 250);
+  --sidebar-accent-foreground: oklch(0.92 0.01 230);
+  --sidebar-border: oklch(0.32 0.06 250);
+  --sidebar-ring: oklch(0.52 0.12 210);
 }
 
 @layer base {
@@ -119,6 +112,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  code, pre, .mono, .font-mono {
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -134,44 +139,210 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
-
   .flex {
     min-height: 0;
     min-width: 0;
   }
-
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
-
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
   }
+
+  /* Healthcare brand gradient */
+  .hsa-gradient {
+    background: linear-gradient(135deg, #1B3A6B 0%, #0E7490 100%);
+  }
+  .hsa-gradient-subtle {
+    background: linear-gradient(135deg, #EFF6FF 0%, #E0F2FE 100%);
+  }
+
+  /* Sidebar nav item */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150;
+    color: oklch(0.78 0.03 230);
+  }
+  .sidebar-item:hover {
+    background: oklch(0.30 0.08 250);
+    color: oklch(0.96 0.01 230);
+  }
+  .sidebar-item.active {
+    background: oklch(0.52 0.12 210 / 0.25);
+    color: oklch(0.96 0.01 230);
+    border-left: 3px solid oklch(0.52 0.12 210);
+  }
+
+  /* Status badges */
+  .badge-active {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: #DCFCE7;
+    color: #166534;
+  }
+  .badge-pending {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: #FEF9C3;
+    color: #854D0E;
+  }
+  .badge-error {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: #FEE2E2;
+    color: #991B1B;
+  }
+  .badge-info {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    background: #E0F2FE;
+    color: #0C4A6E;
+  }
+
+  /* Step indicator */
+  .step-indicator {
+    @apply flex items-center;
+  }
+  .step-dot {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all;
+  }
+  .step-dot.completed {
+    background: #0E7490;
+    color: white;
+  }
+  .step-dot.active {
+    background: #1B3A6B;
+    color: white;
+    box-shadow: 0 0 0 4px rgba(27, 58, 107, 0.15);
+  }
+  .step-dot.pending {
+    background: #E5E7EB;
+    color: #6B7280;
+  }
+  .step-line {
+    @apply flex-1 h-0.5 mx-2;
+    background: #E5E7EB;
+  }
+  .step-line.completed {
+    background: #0E7490;
+  }
+
+  /* Data table */
+  .data-table th {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 text-left;
+    background: oklch(0.94 0.008 230);
+  }
+  .data-table td {
+    @apply px-4 py-3 text-sm border-b border-border;
+  }
+  .data-table tr:hover td {
+    background: oklch(0.97 0.005 230);
+  }
+
+  /* Audit log chain */
+  .audit-chain-item {
+    @apply relative pl-8 pb-6;
+  }
+  .audit-chain-item::before {
+    content: '';
+    @apply absolute left-3 top-6 bottom-0 w-0.5;
+    background: oklch(0.88 0.01 230);
+  }
+  .audit-chain-item:last-child::before {
+    display: none;
+  }
+  .audit-chain-dot {
+    @apply absolute left-1 top-1 w-4 h-4 rounded-full border-2 border-white;
+  }
+
+  /* PHI warning banner */
+  .phi-warning {
+    @apply flex items-start gap-3 p-4 rounded-lg border;
+    background: #FFF7ED;
+    border-color: #FED7AA;
+    color: #9A3412;
+  }
+
+  /* Security indicator */
+  .security-indicator {
+    @apply flex items-center gap-2 text-xs font-medium;
+    color: #0E7490;
+  }
+
+  /* MBI display */
+  .mbi-display {
+    font-family: 'IBM Plex Mono', monospace;
+    @apply text-lg font-semibold tracking-widest;
+    color: #1B3A6B;
+  }
+
+  /* FHIR resource card */
+  .fhir-card {
+    @apply rounded-lg border bg-card p-4 hover:shadow-md transition-shadow;
+  }
+
+  /* Password strength bar */
+  .strength-bar {
+    @apply h-1.5 rounded-full transition-all duration-300;
+  }
+
+  /* OTP input styling */
+  .otp-input {
+    @apply w-12 h-14 text-center text-xl font-semibold border-2 rounded-lg;
+    font-family: 'IBM Plex Mono', monospace;
+    border-color: oklch(0.88 0.01 230);
+  }
+  .otp-input:focus {
+    border-color: #0E7490;
+    box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15);
+    outline: none;
+  }
 }
+
+/* Smooth page transitions */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.2s ease-out forwards;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.15s ease-out forwards;
+}
+
+/* Staggered card animation */
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 50ms; }
+.stagger-3 { animation-delay: 100ms; }
+.stagger-4 { animation-delay: 150ms; }
+.stagger-5 { animation-delay: 200ms; }

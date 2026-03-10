@@ -1,0 +1,440 @@
+// Healthcare Select Access — Prisma Schema
+// Design: Secure Clarity | Federal Blue + Medical Teal
+// This schema represents the full production database model.
+// In the static demo, all data is simulated via mock-data.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum AccountStatus {
+  PENDING_EMAIL_VERIFICATION
+  PENDING_IDENTITY_VERIFICATION
+  PENDING_MFA_ENROLLMENT
+  ACTIVE
+  SUSPENDED
+  LOCKED
+}
+
+enum UserRole {
+  BENEFICIARY
+  PROVIDER
+  ADMIN
+}
+
+enum BB2ConnectionStatus {
+  NOT_CONNECTED
+  CONNECTED
+  EXPIRED
+  REVOKED
+}
+
+enum AuditSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum AuditEventType {
+  AUTH_LOGIN_SUCCESS
+  AUTH_LOGIN_FAILURE
+  AUTH_LOGOUT
+  AUTH_REGISTER
+  AUTH_EMAIL_VERIFY
+  AUTH_MFA_ENROLL
+  AUTH_MFA_VERIFY
+  AUTH_MFA_FAILURE
+  AUTH_PASSWORD_CHANGE
+  AUTH_PASSWORD_RESET
+  TOKEN_ISSUED
+  TOKEN_REFRESHED
+  TOKEN_REVOKED
+  TOKEN_INTROSPECT
+  IDENTITY_VERIFY_START
+  IDENTITY_VERIFY_SUCCESS
+  IDENTITY_VERIFY_FAILURE
+  BB2_CONNECT_INIT
+  BB2_CONNECT_SUCCESS
+  BB2_CONNECT_FAILURE
+  BB2_DISCONNECT
+  BB2_TOKEN_REFRESH
+  FHIR_READ
+  FHIR_SEARCH
+  PHI_ACCESS
+  PHI_EXPORT
+  PHI_DOWNLOAD
+  SHARE_CREATE
+  SHARE_ACCESS
+  SHARE_REVOKE
+  SHARE_EXPIRE
+  ADMIN_USER_VIEW
+  ADMIN_USER_SUSPEND
+  ADMIN_USER_ACTIVATE
+  ADMIN_AUDIT_VIEW
+  SECURITY_IP_MISMATCH
+  SECURITY_UA_MISMATCH
+  SECURITY_RATE_LIMIT
+  SECURITY_SUSPICIOUS
+  CONSENT_UPDATE
+  DATA_DELETE_REQUEST
+  PROVIDER_VERIFY
+  OIDC_AUTHORIZE
+  OIDC_TOKEN_EXCHANGE
+  KEY_ROTATION
+}
+
+enum ConsentType {
+  BB2_DATA_ACCESS
+  PROVIDER_SHARE
+  ANALYTICS
+  MARKETING
+}
+
+enum ExportFormat {
+  FHIR_JSON
+  PDF
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORE USER MODEL
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String        @id @default(cuid())
+  email     String        @unique
+  role      UserRole      @default(BENEFICIARY)
+  status    AccountStatus @default(PENDING_EMAIL_VERIFICATION)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Profile
+  firstName String
+  lastName  String
+
+  // Security
+  passwordHash      String
+  passwordChangedAt DateTime?
+  failedLoginCount  Int       @default(0)
+  lockedUntil       DateTime?
+
+  // Email verification
+  emailVerifiedAt DateTime?
+
+  // Identity proofing (MBI stored as HMAC-SHA256 hash, never plaintext)
+  mbiHash     String?   @unique
+  mbiLast4    String?
+  identityVerifiedAt DateTime?
+
+  // MFA
+  mfaEnabled    Boolean  @default(false)
+  mfaSecret     String?  // AES-256-GCM encrypted TOTP secret
+  mfaEnrolledAt DateTime?
+  backupCodes   String[] // bcrypt-hashed backup codes
+
+  // Blue Button 2.0
+  bb2Status          BB2ConnectionStatus @default(NOT_CONNECTED)
+  bb2PatientId       String?             // Isolated CMS patient ID
+  bb2AccessToken     String?             // AES-256-GCM encrypted
+  bb2RefreshToken    String?             // AES-256-GCM encrypted
+  bb2TokenExpiresAt  DateTime?
+  bb2ConnectedAt     DateTime?
+  bb2LastSyncAt      DateTime?
+
+  // Data encryption key (envelope encryption)
+  dekEncrypted String?  // Per-user DEK encrypted with KMS master key
+
+  // Metadata
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  lastLoginUa   String?
+
+  // Relations
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  shareLinks        ShareLink[]
+  consents          Consent[]
+  exports           Export[]
+  oidcAuthCodes     OIDCAuthCode[]
+  oidcTokens        OIDCToken[]
+  providerProfile   ProviderProfile?
+  emailVerifications EmailVerification[]
+
+  @@index([email])
+  @@index([mbiHash])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String   @unique  // SHA-256 hash of session token
+  ipAddress   String
+  userAgent   String
+  fingerprint String?  // Browser fingerprint hash
+  createdAt   DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  mfaVerified Boolean  @default(false)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMAIL VERIFICATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  otpHash   String   // bcrypt hash of 6-digit OTP
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT LOG (tamper-evident chain)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String         @id @default(cuid())
+  eventType    AuditEventType
+  severity     AuditSeverity  @default(INFO)
+  userId       String?
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userEmail    String?        // Denormalized for post-deletion audit
+  ipAddress    String
+  userAgent    String?
+  resourceType String?        // FHIR resource type (Patient, EOB, Coverage)
+  resourceId   String?
+  details      Json           @default("{}")
+  // Tamper-evident chain
+  chainHash    String         // SHA-256(prevHash + eventData)
+  prevHash     String         // Previous entry's chainHash
+  createdAt    DateTime       @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([createdAt])
+  @@index([resourceType, resourceId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARE LINKS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ShareLink {
+  id             String    @id @default(cuid())
+  token          String    @unique  // Signed RS256 JWT token
+  tokenHash      String    @unique  // SHA-256 for fast lookup
+  createdBy      String
+  creator        User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  recipientEmail String?
+  recipientNpi   String?
+  resourceTypes  String[]  // ["ExplanationOfBenefit", "Coverage", "Patient"]
+  expiresAt      DateTime
+  viewCount      Int       @default(0)
+  maxViews       Int?
+  viewOnce       Boolean   @default(false)
+  isRevoked      Boolean   @default(false)
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([createdBy])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OIDC PROVIDER
+// ─────────────────────────────────────────────────────────────────────────────
+
+model OIDCClient {
+  id           String   @id @default(cuid())
+  clientId     String   @unique
+  clientName   String
+  // Client secret stored as bcrypt hash
+  secretHash   String?
+  redirectUris String[]
+  scopes       String[]
+  grantTypes   String[] @default(["authorization_code", "refresh_token"])
+  isPublic     Boolean  @default(false)  // PKCE-only clients
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  authCodes OIDCAuthCode[]
+  tokens    OIDCToken[]
+
+  @@index([clientId])
+}
+
+model OIDCAuthCode {
+  id                  String     @id @default(cuid())
+  code                String     @unique
+  clientId            String
+  client              OIDCClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId              String
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redirectUri         String
+  scopes              String[]
+  nonce               String?
+  // PKCE
+  codeChallenge       String
+  codeChallengeMethod String     @default("S256")
+  expiresAt           DateTime
+  usedAt              DateTime?
+  createdAt           DateTime   @default(now())
+
+  @@index([code])
+  @@index([userId])
+}
+
+model OIDCToken {
+  id            String     @id @default(cuid())
+  accessToken   String     @unique
+  refreshToken  String?    @unique
+  tokenType     String     @default("Bearer")
+  clientId      String
+  client        OIDCClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scopes        String[]
+  accessExpiry  DateTime
+  refreshExpiry DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime   @default(now())
+
+  @@index([accessToken])
+  @@index([refreshToken])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JWKS KEY ROTATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model JWKSKey {
+  id         String   @id @default(cuid())
+  kid        String   @unique  // Key ID (UUID)
+  algorithm  String   @default("RS256")
+  // Private key stored AES-256-GCM encrypted with KMS
+  privateKey String
+  publicKey  String   // PEM public key (stored plaintext for JWKS endpoint)
+  isActive   Boolean  @default(true)
+  rotatedAt  DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([kid])
+  @@index([isActive])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSENT RECORDS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Consent {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentType ConsentType
+  granted     Boolean
+  grantedAt   DateTime?
+  revokedAt   DateTime?
+  version     String      // Consent document version (e.g., "2024-01-01")
+  ipAddress   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([userId, consentType])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA EXPORTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Export {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  format        ExportFormat
+  resourceTypes String[]
+  status        ExportStatus @default(PENDING)
+  downloadUrl   String?      // Signed S3 URL (expires in 24h)
+  expiresAt     DateTime?
+  createdAt     DateTime     @default(now())
+  completedAt   DateTime?
+  errorMessage  String?
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROVIDER VERIFICATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ProviderProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  npi              String   @unique
+  firstName        String
+  lastName         String
+  credential       String?  // MD, DO, NP, PA, etc.
+  specialty        String?
+  organizationName String?
+  address          String?
+  verifiedAt       DateTime
+  verifiedBy       String   // "NPPES_API" or admin user ID
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([npi])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RATE LIMITING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique  // "ip:action" or "userId:action"
+  count     Int      @default(1)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([resetAt])
+}
