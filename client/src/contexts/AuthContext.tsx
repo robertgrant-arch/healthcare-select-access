@@ -3,7 +3,9 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User, AccountStatus } from '@/lib/types';
-import { MOCK_USER } from '@/lib/mock-data';
+
+// API base URL for auth endpoints
+const API_BASE = '/api/auth';
 
 interface AuthContextValue {
   user: User | null;
@@ -36,132 +38,176 @@ interface IdentityData {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Simulated auth state for demo
-const DEMO_CREDENTIALS = { email: 'jane.doe@example.com', password: 'Demo@1234!' };
+// Secure fetch wrapper with credentials and error handling
+async function authFetch(endpoint: string, options: RequestInit = {}) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(error.message || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [accountStatus, setAccountStatus] = useState<AccountStatus | null>(null);
 
-  // Restore session from localStorage on mount
+  // Validate session on mount via server-side check
   useEffect(() => {
-    const stored = localStorage.getItem('hsa_session');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setUser(parsed.user);
-        setAccountStatus(parsed.user.status);
-      } catch {
-        localStorage.removeItem('hsa_session');
-      }
+    authFetch('/me')
+      .then((data) => {
+        setUser(data.user);
+        setAccountStatus(data.user.status);
+      })
+      .catch(() => {
+        setUser(null);
+        setAccountStatus(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const data = await authFetch('/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      return { requiresMfa: data.requiresMfa, userId: data.userId };
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
-  const login = useCallback(async (email: string, _password: string) => {
+  const verifyMfa = useCallback(async (userId: string, code: string) => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 800)); // Simulate network
-    setIsLoading(false);
-
-    // Demo: any credentials work, but show MFA step
-    const userId = 'usr_01HXYZ1234567890';
-    return { requiresMfa: true, userId };
-  }, []);
-
-  const verifyMfa = useCallback(async (userId: string, _code: string) => {
-    setIsLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    const userData = { ...MOCK_USER, id: userId };
-    setUser(userData);
-    setAccountStatus('ACTIVE');
-    localStorage.setItem('hsa_session', JSON.stringify({ user: userData, expiresAt: Date.now() + 8 * 3600 * 1000 }));
-    setIsLoading(false);
+    try {
+      const data = await authFetch('/mfa/verify', {
+        method: 'POST',
+        body: JSON.stringify({ userId, code }),
+      });
+      setUser(data.user);
+      setAccountStatus(data.user.status);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const logout = useCallback(async () => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 300));
-    setUser(null);
-    setAccountStatus(null);
-    localStorage.removeItem('hsa_session');
-    setIsLoading(false);
+    try {
+      await authFetch('/logout', { method: 'POST' });
+    } finally {
+      setUser(null);
+      setAccountStatus(null);
+      setIsLoading(false);
+    }
   }, []);
 
-  const register = useCallback(async (_data: RegisterData) => {
+  const register = useCallback(async (data: RegisterData) => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setIsLoading(false);
-    return { userId: 'usr_new_' + Date.now() };
+    try {
+      const result = await authFetch('/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return { userId: result.userId };
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const verifyEmail = useCallback(async (_userId: string, _otp: string) => {
+  const verifyEmail = useCallback(async (userId: string, otp: string) => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    setAccountStatus('PENDING_IDENTITY_VERIFICATION');
-    setIsLoading(false);
+    try {
+      const data = await authFetch('/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ userId, otp }),
+      });
+      setAccountStatus(data.status);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const verifyIdentity = useCallback(async (_data: IdentityData) => {
+  const verifyIdentity = useCallback(async (data: IdentityData) => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setAccountStatus('PENDING_MFA_ENROLLMENT');
-    setIsLoading(false);
+    try {
+      const result = await authFetch('/verify-identity', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      setAccountStatus(result.status);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const setupMfa = useCallback(async () => {
-    await new Promise(r => setTimeout(r, 500));
-    // Generate a demo TOTP setup
+    const data = await authFetch('/mfa/setup', { method: 'POST' });
     return {
-      secret: 'JBSWY3DPEHPK3PXP',
-      uri: 'otpauth://totp/HealthcareSelectAccess:jane.doe@example.com?secret=JBSWY3DPEHPK3PXP&issuer=HealthcareSelectAccess',
-      qrDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      backupCodes: [
-        'ALPHA-BRAVO-1234',
-        'CHARLIE-DELTA-5678',
-        'ECHO-FOXTROT-9012',
-        'GOLF-HOTEL-3456',
-        'INDIA-JULIET-7890',
-        'KILO-LIMA-2345',
-        'MIKE-NOVEMBER-6789',
-        'OSCAR-PAPA-0123',
-      ],
+      secret: data.secret,
+      uri: data.uri,
+      qrDataUrl: data.qrDataUrl,
+      backupCodes: data.backupCodes,
     };
   }, []);
 
-  const confirmMfaSetup = useCallback(async (_code: string) => {
+  const confirmMfaSetup = useCallback(async (code: string) => {
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    const userData = { ...MOCK_USER, mfaEnabled: true, status: 'ACTIVE' as const };
-    setUser(userData);
-    setAccountStatus('ACTIVE');
-    localStorage.setItem('hsa_session', JSON.stringify({ user: userData, expiresAt: Date.now() + 8 * 3600 * 1000 }));
-    setIsLoading(false);
+    try {
+      const data = await authFetch('/mfa/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      });
+      setUser(data.user);
+      setAccountStatus(data.user.status);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const refreshUser = useCallback(async () => {
     if (user) {
-      await new Promise(r => setTimeout(r, 300));
-      // In production, re-fetch user from API
+      try {
+        const data = await authFetch('/me');
+        setUser(data.user);
+        setAccountStatus(data.user.status);
+      } catch {
+        setUser(null);
+        setAccountStatus(null);
+      }
     }
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      isLoading,
-      accountStatus,
-      login,
-      verifyMfa,
-      logout,
-      register,
-      verifyEmail,
-      verifyIdentity,
-      setupMfa,
-      confirmMfaSetup,
-      refreshUser,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        accountStatus,
+        login,
+        verifyMfa,
+        logout,
+        register,
+        verifyEmail,
+        verifyIdentity,
+        setupMfa,
+        confirmMfaSetup,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
