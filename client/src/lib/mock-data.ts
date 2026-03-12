@@ -1,3 +1,7 @@
+// WARNING: This file contains DEMO-ONLY mock data for UI development.
+// DO NOT use in production. All identifiers are fictional.
+// In production, all data must come from authenticated API endpoints.
+//
 // Healthcare Select Access — Mock Data
 // Simulates API responses for the frontend demo
 
