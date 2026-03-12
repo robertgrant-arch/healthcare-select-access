@@ -4,10 +4,10 @@
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 // Pages
 import Home from "./pages/Home";
@@ -27,6 +27,40 @@ import AdminPanel from "./pages/admin/AdminPanel";
 import Settings from "./pages/settings/Settings";
 import OIDCDocs from "./pages/docs/OIDCDocs";
 
+// Protected Route wrapper — redirects to login if not authenticated
+function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>; path?: string }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Redirect to="/auth/login" />;
+  }
+
+  return <Component {...rest} />;
+}
+
+// Admin Route wrapper — requires admin role
+function AdminRoute({ component: Component, ...rest }: { component: React.ComponentType<any>; path?: string }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Redirect to="/auth/login" />;
+  }
+
+  if (user.role !== "admin") {
+    return <Redirect to="/dashboard" />;
+  }
+
+  return <Component {...rest} />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -42,14 +76,16 @@ function Router() {
       <Route path="/auth/mfa/setup" component={MfaSetup} />
       <Route path="/auth/mfa/verify" component={MfaVerify} />
 
-      {/* Authenticated */}
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/records" component={Records} />
-      <Route path="/records/:id" component={RecordDetail} />
-      <Route path="/share/create" component={ShareCreate} />
-      <Route path="/share/:shareId" component={ShareView} />
-      <Route path="/admin" component={AdminPanel} />
-      <Route path="/settings" component={Settings} />
+      {/* Authenticated — protected routes */}
+      <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/records">{() => <ProtectedRoute component={Records} />}</Route>
+      <Route path="/records/:id">{(params) => <ProtectedRoute component={RecordDetail} {...params} />}</Route>
+      <Route path="/share/create">{() => <ProtectedRoute component={ShareCreate} />}</Route>
+      <Route path="/share/:shareId">{(params) => <ProtectedRoute component={ShareView} {...params} />}</Route>
+      <Route path="/settings">{() => <ProtectedRoute component={Settings} />}</Route>
+
+      {/* Admin only */}
+      <Route path="/admin">{() => <AdminRoute component={AdminPanel} />}</Route>
 
       {/* 404 */}
       <Route component={NotFound} />
