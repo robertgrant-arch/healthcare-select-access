@@ -26,7 +26,7 @@ export const MOCK_USER: User = {
 
 export const MOCK_ADMIN_USER: User = {
   id: 'usr_admin_01',
-  email: 'admin@hsa.gov',
+  email: 'admin@demo.example.com',
   firstName: 'System',
   lastName: 'Administrator',
   role: 'ADMIN',
