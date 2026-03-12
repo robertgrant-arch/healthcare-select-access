@@ -324,3 +324,32 @@ AWS_SECRET_ACCESS_KEY="..."
 - [ ] Enable HTTPS (required for HIPAA)
 - [ ] Configure WAF rules for rate limiting
 - [ ] Set up database backups with encryption
+
+----
+
+## Security Review Status
+
+### Completed Hardening (Code Review - March 2026)
+
+1. **Manus Build Artifacts Removed** - Deleted `debug-collector.js` telemetry script and Manus Vite plugin references
+2. **Internal Notes Removed** - Deleted `ideas.md` containing implementation details
+3. **Build Config Cleaned** - `vite.config.ts` rewritten to remove third-party build hooks
+4. **Server Security Headers** - Added HSTS, CSP, X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+5. **Content Security Policy** - Strict CSP with explicit allowlists for CMS Blue Button API endpoints
+6. **Rate Limiting** - In-memory rate limiter on all server routes (100 req/min per IP)
+7. **Route Guards** - `ProtectedRoute` and `AdminRoute` wrappers enforce authentication and role checks on client routes
+8. **Auth Context Secured** - Replaced mock authentication with API-based auth using httpOnly cookie sessions; removed hardcoded credentials and MOCK_USER dependency
+9. **Mock Data Disclaimer** - Added production warnings to demo data file
+
+### Remaining Items for Production
+
+- [ ] Implement server-side API auth routes (`/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, etc.)
+- [ ] Add CSRF token middleware (double-submit cookie or synchronizer token)
+- [ ] Implement server-side session management with httpOnly secure cookies
+- [ ] Add request input validation and sanitization (zod schemas on all API inputs)
+- [ ] Replace in-memory rate limiter with Redis-backed solution
+- [ ] Add audit logging for all authentication and data access events
+- [ ] Implement FHIR R4 proxy with patient-scoped token isolation
+- [ ] Set up envelope encryption for PHI at rest (AES-256-GCM + KMS)
+- [ ] Configure WAF rules for production deployment
+- [ ] Complete HIPAA security risk assessment
